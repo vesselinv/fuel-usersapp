@@ -7,12 +7,6 @@ class_alias('Fuel\\Core\\Autoloader', 'Autoloader');
 // Bootstrap the framework DO NOT edit this
 require COREPATH.'bootstrap.php';
 
-
-Autoloader::add_classes(array(
-	// Add classes you want to override here
-	// Example: 'View' => APPPATH.'classes/view.php',
-));
-
 // Autoload our custom Observer and Validation classes
 Autoloader::add_classes(array(
     'Orm\\Observer_User' => APPPATH.'classes/observer/user.php',
@@ -21,6 +15,9 @@ Autoloader::add_classes(array(
 
 // Register the autoloader
 Autoloader::register();
+
+// Composer Autoloader
+require APPPATH.'vendor/autoload.php';
 
 /**
  * Your environment.  Can be set to any of the following:

@@ -68,8 +68,16 @@ class Model_User extends Model
 				'type' => false, # Prevent this field from being generated on a form
 			),
 		),
-		'created_at',
-		'updated_at',
+		'created_at' => array(
+			'form' => array(
+				'type' => false, # Prevent this field from being generated on a form
+			),
+		),
+		'updated_at' => array(
+			'form' => array(
+				'type' => false, # Prevent this field from being generated on a form
+			),
+		),
 	);
 
 	/* It's being observed! */
@@ -91,7 +99,9 @@ class Model_User extends Model
 		'Orm\\Observer_User',
 	);
 
-	/* Exclude this columns from being shown in the Model_User object after calling to_aray() */
+	/* Exclude this columns from being shown in the Model_User object after calling to_aray() 
+	* This will server as a bridge to our presenter
+	*/
 	protected static $_to_array_exclude = array(
 		'password', 'last_ip'
   );

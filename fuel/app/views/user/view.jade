@@ -1,0 +1,8 @@
+//- fuel/app/views/user/view.jade
+h2 Viewing #{{ $user['id'] }}
+- foreach($user as $key => $value):
+	p
+		strong {{ Inflector::humanize($key) }}:
+		{{ $value }}
+{{ Html::anchor('user/edit/'.$user['id'], 'Edit'); }} |
+{{ Html::anchor('user', 'Back'); }}

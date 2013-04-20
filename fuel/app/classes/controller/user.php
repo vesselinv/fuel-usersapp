@@ -1,129 +1,170 @@
 <?php
+# fuel/app/classes/controller/user.php
+
 class Controller_User extends Controller_Template 
 {
+	public $template = 'template.jade';
 
+	/**
+	* list Users
+	* @access public
+	* @param none
+	* @return Response
+	*/
 	public function action_index()
 	{
-		$data['users'] = Model_User::find('all');
+		$users = Model_User::find('all');
+		$data['users'] = array_map(function($user){
+			return $user->to_array(); # Proper exposure of the Model_User
+		}, $users);
 		$this->template->title = "Users";
-		$this->template->content = View::forge('user/index', $data);
-
+		$this->template->content = View::forge('user/index.jade', $data);
 	}
 
+	/**
+	 * View User record
+	 * @access public
+	 * @param int id
+	 * @return Response
+	 */
 	public function action_view($id = null)
 	{
 		is_null($id) and Response::redirect('User');
 
-		if ( ! $data['user'] = Model_User::find($id))
+		$user = Model_User::find($id);
+
+		if ( ! $user )
 		{
 			Session::set_flash('error', 'Could not find user #'.$id);
 			Response::redirect('User');
 		}
 
+		$data['user'] = $user->to_array();
 		$this->template->title = "User";
-		$this->template->content = View::forge('user/view', $data);
+		$this->template->content = View::forge('user/view.jade', $data);
 
 	}
 
+	/**
+	 * Create User
+	 * @access public
+	 * @param none
+	 * @return Response
+	 */
 	public function action_create()
 	{
-		if (Input::method() == 'POST')
+		# Forge a fieldset and add all Model_User properties to it
+		$fieldset = \Fieldset::forge() -> add_model('Model_User');
+
+		# Add a virtual password confirm field
+		$fieldset -> add_after(
+			'password_confirm', 
+			'Retype Password', 
+			array('type' => 'password'), 
+			array( 
+				array( 'min_length', 5 ), 
+				array( 'match_field', 'password' ), 
+				array( 'required' ), 
+				), 
+			'password');
+
+		# Repopulate if Save action failed
+		$fieldset -> repopulate();
+
+		# Turn it into a form
+		$form     = $fieldset->form();
+
+		# Add our submit button
+		$form -> add('submit', '', array('type' => 'submit', 'value' => 'Save', 'class' => 'btn btn-large btn-block btn-primary') ); 
+
+		# Remember, this form is going to post to itself by defult
+		# so we need to process the input in this same controller method
+		if ( $fieldset -> validation() -> run() ) # Validation success
 		{
-			$val = Model_User::validate('create');
-			
-			if ($val->run())
-			{
-				$user = Model_User::forge(array(
-					'username' => Input::post('username'),
-					'password' => Input::post('password'),
-					'email' => Input::post('email'),
-					'name' => Input::post('name'),
-					'date_of_birth' => Input::post('date_of_birth'),
-					'gender' => Input::post('gender'),
-					'last_ip' => Input::post('last_ip'),
-				));
+			$fields = $fieldset->validated(); # Grab our input values
 
-				if ($user and $user->save())
-				{
-					Session::set_flash('success', 'Added user #'.$user->id.'.');
+			# Best use a try/catch block
+			# Model will throw a Orm\ValidationFailed exception if validation fails
+			try {
+				$user = new Model_User($fields);
+				$user->save();
 
-					Response::redirect('user');
-				}
+				Session::set_flash('success', 'Added user #'.$user->id.'.');
 
-				else
-				{
-					Session::set_flash('error', 'Could not save user.');
-				}
+				Response::redirect('user');
+
+			} catch (Exception $e) {
+				Session::set_flash('error', $e->getMessage());
 			}
-			else
-			{
-				Session::set_flash('error', $val->error());
-			}
+
+		} else
+		{
+			Session::set_flash('error', $fieldset->validation()->show_errors());
 		}
 
-		$this->template->title = "Users";
-		$this->template->content = View::forge('user/create');
-
+		$this->template->title = "Add User";
+		$this->template->set('content', $form->build(), false);
 	}
 
+	/**
+	 * Edit User
+	 * @access public
+	 * @param int $id
+	 * @return Response
+	 */
 	public function action_edit($id = null)
 	{
 		is_null($id) and Response::redirect('User');
-
-		if ( ! $user = Model_User::find($id))
+		
+		if ( ! $user = Model_User::find($id) )
 		{
 			Session::set_flash('error', 'Could not find user #'.$id);
 			Response::redirect('User');
 		}
 
-		$val = Model_User::validate('edit');
+		$fieldset = \Fieldset::forge() -> add_model('Model_User')->populate($user, true);
+		$fieldset->disable('password');
 
-		if ($val->run())
-		{
-			$user->username = Input::post('username');
-			$user->password = Input::post('password');
-			$user->email = Input::post('email');
-			$user->name = Input::post('name');
-			$user->date_of_birth = Input::post('date_of_birth');
-			$user->gender = Input::post('gender');
-			$user->last_ip = Input::post('last_ip');
+		$form     = $fieldset->form();
+		$form -> add('submit', '', array('type' => 'submit', 'value' => 'Save', 'class' => 'btn btn-large btn-block btn-primary') );
+		
+		# Attempt to save on unempty input
+		if (Input::method() == 'POST') {
 
-			if ($user->save())
-			{
-				Session::set_flash('success', 'Updated user #' . $id);
+			$fields = $fieldset->input();
+
+			try {
+				# Remove null values and those that haven't changed
+				$clean_array = function(array $fields, Model_User $user){
+					foreach ($fields as $key => $value) {
+						if (empty($value) || $value == $user->$key) 
+							unset($fields[$key]);
+					}
+					return $fields;
+				};
+				# Set property values and save
+				$user->set($clean_array($fields, $user));
+				$user->save();
+
+				Session::set_flash('success', 'Updated user #' . $user->id . '.');
 
 				Response::redirect('user');
-			}
 
-			else
-			{
-				Session::set_flash('error', 'Could not update user #' . $id);
+			} catch (Orm\ValidationFailed $e) {
+				Session::set_flash('error', $e->getMessage());
 			}
 		}
 
-		else
-		{
-			if (Input::method() == 'POST')
-			{
-				$user->username = $val->validated('username');
-				$user->password = $val->validated('password');
-				$user->email = $val->validated('email');
-				$user->name = $val->validated('name');
-				$user->date_of_birth = $val->validated('date_of_birth');
-				$user->gender = $val->validated('gender');
-				$user->last_ip = $val->validated('last_ip');
-
-				Session::set_flash('error', $val->error());
-			}
-
-			$this->template->set_global('user', $user, false);
-		}
-
-		$this->template->title = "Users";
-		$this->template->content = View::forge('user/edit');
-
+		$this->template->title = "User #" . $id;
+		$this->template->set('content', $form->build(), false);
 	}
 
+	/**
+	 * Delete User
+	 * @access public
+	 * @param int $id
+	 * @return Response
+	 */
 	public function action_delete($id = null)
 	{
 		is_null($id) and Response::redirect('User');
@@ -133,16 +174,12 @@ class Controller_User extends Controller_Template
 			$user->delete();
 
 			Session::set_flash('success', 'Deleted user #'.$id);
-		}
-
-		else
-		{
+		} else {
 			Session::set_flash('error', 'Could not delete user #'.$id);
 		}
 
 		Response::redirect('user');
 
 	}
-
 
 }

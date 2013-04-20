@@ -1,0 +1,31 @@
+//- fuel/app/views/template.jade
+!!! 5
+html
+	head
+		meta(charset="utf-8")
+		title {{ $title }}
+		{{ Asset::css('bootstrap.css') }}
+	body
+		.container
+			.row
+				.span16
+					h1 {{ $title }}
+					hr
+					- if (Session::get_flash('success')):
+						.alert-message.success
+							p {{ html_entity_decode(implode('</p><p>', e((array) Session::get_flash('success')))) }}
+					- endif
+					- if (Session::get_flash('error')):
+						.alert-message.error
+							p {{ html_entity_decode(implode('</p><p>', e((array) Session::get_flash('error'))) )}}
+					- endif
+				.span16
+					{{ $content }}
+			footer
+				p.pull-right Page rendered in {exec_time}s using {mem_usage}mb of memory.
+				p
+					a(href="http://fuelphp.com") FuelPHP
+					| is released under the MIT license.
+					br
+					small Version:
+					| {{ e(Fuel::VERSION) }}

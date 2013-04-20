@@ -1,0 +1,22 @@
+//- fuel/app/views/user/index.jade
+h2 Listing Users
+- if ($users):
+	table.table.table-striped
+		thead
+			tr
+				//- Set table headings - grab the keys from first $users item
+				- foreach (reset($users) as $key => $val):
+					th {{ Inflector::humanize($key) }}
+				th
+		tbody
+			- foreach ($users as $user):
+				tr
+					- foreach ($user as $key => $value):
+						td {{ $value }}
+					td
+						{{ Html::anchor('user/view/'.$user['id'], 'View') }}
+						{{ Html::anchor('user/edit/'.$user['id'], 'Edit') }}
+						{{ Html::anchor('user/delete/'.$user['id'], 'Delete', array('onclick' => "return confirm('Are you sure?')")) }}
+- else:
+	p No Users.
+p {{ Html::anchor('user/create', 'Add new User', array('class' => 'btn btn-success')) }}

@@ -11,7 +11,7 @@ return array(
 			'connection'     => array(
 				'dsn'            => 'mysql:host=localhost;dbname=usersapp',
 				'username'       => 'fuel_user',
-				'password'       => 'nottooshabby',
+				'password'       => 'fuel',
 				'persistent'     => false,
 				'compress'       => true,
 			),
